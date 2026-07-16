@@ -40,7 +40,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GPG_FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
+      - name: Locate release checksum file
+        id: checksum
+        run: |
+          mapfile -t checksum_files < <(find dist -maxdepth 1 -type f -name '*_SHA256SUMS')
+          test "${#checksum_files[@]}" -eq 1
+          echo "path=${checksum_files[0]}" >> "$GITHUB_OUTPUT"
       - name: Attest release checksums
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-checksums: dist/terraform-provider-adguardhome_*_SHA256SUMS
+          subject-checksums: ${{ steps.checksum.outputs.path }}
