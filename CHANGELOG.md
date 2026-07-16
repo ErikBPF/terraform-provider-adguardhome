@@ -5,6 +5,12 @@ Semantic Versioning.
 
 ## Unreleased
 
+### Fixed
+
+- Registry checksums now cover only the 13 provider archives and manifest;
+  SPDX SBOMs remain separate release assets. Versions 0.1.1 and 0.1.2 are
+  affected by checksums that incorrectly reference SBOM assets.
+
 ## [0.1.0] - 2026-07-16
 
 ### Added
