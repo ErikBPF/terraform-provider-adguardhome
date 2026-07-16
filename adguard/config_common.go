@@ -228,6 +228,14 @@ func (o dnsConfigModel) defaultObject() map[string]attr.Value {
 	}
 }
 
+func dnsAccessClientsSet(ctx context.Context, clients []string, rtype string) (types.Set, diag.Diagnostics) {
+	if len(clients) == 0 && rtype == "resource" {
+		return types.SetNull(types.StringType), nil
+	}
+
+	return types.SetValueFrom(ctx, types.StringType, clients)
+}
+
 // dhcpStatusModel maps DHCP schema data
 type dhcpStatusModel struct {
 	Enabled      types.Bool   `tfsdk:"enabled"`
@@ -914,12 +922,12 @@ func (o *configCommonModel) Read(ctx context.Context, adg adguard.ADG, currState
 		"object": "dnsAccess",
 		"body":   string(dnsAccessJson),
 	})
-	stateDnsConfig.AllowedClients, d = types.SetValueFrom(ctx, types.StringType, dnsAccess.AllowedClients)
+	stateDnsConfig.AllowedClients, d = dnsAccessClientsSet(ctx, dnsAccess.AllowedClients, rtype)
 	diags.Append(d...)
 	if diags.HasError() {
 		return
 	}
-	stateDnsConfig.DisallowedClients, d = types.SetValueFrom(ctx, types.StringType, dnsAccess.DisallowedClients)
+	stateDnsConfig.DisallowedClients, d = dnsAccessClientsSet(ctx, dnsAccess.DisallowedClients, rtype)
 	diags.Append(d...)
 	if diags.HasError() {
 		return

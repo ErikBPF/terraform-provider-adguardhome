@@ -48,6 +48,36 @@ func TestNormalizeDisabledDhcpStatus(t *testing.T) {
 	}
 }
 
+func TestDnsAccessClientsSetNormalizesEmptyResourceValues(t *testing.T) {
+	for _, clients := range [][]string{nil, {}} {
+		value, diags := dnsAccessClientsSet(context.Background(), clients, "resource")
+		if diags.HasError() {
+			t.Fatalf("unexpected diagnostics: %v", diags)
+		}
+		if !value.IsNull() {
+			t.Fatalf("empty resource clients were not normalized to null: %v", value)
+		}
+	}
+}
+
+func TestDnsAccessClientsSetPreservesDataSourceAndPopulatedValues(t *testing.T) {
+	empty, diags := dnsAccessClientsSet(context.Background(), []string{}, "data source")
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if empty.IsNull() || len(empty.Elements()) != 0 {
+		t.Fatalf("empty data source clients changed: %v", empty)
+	}
+
+	populated, diags := dnsAccessClientsSet(context.Background(), []string{"192.0.2.1"}, "resource")
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if populated.IsNull() || len(populated.Elements()) != 1 {
+		t.Fatalf("populated resource clients changed: %v", populated)
+	}
+}
+
 func TestNormalizeDisabledDhcpStatusPreservesEnabledConfig(t *testing.T) {
 	status := adgmodels.DhcpStatus{
 		Enabled:       true,
