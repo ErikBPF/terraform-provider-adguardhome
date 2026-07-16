@@ -18,6 +18,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_wrapper: false
       - name: Generate Registry documentation
         run: go generate ./...
       - name: Require committed generated documentation
