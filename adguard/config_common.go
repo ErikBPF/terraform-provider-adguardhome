@@ -335,6 +335,23 @@ func tlsConfigInputsEqual(planned, current types.Object) bool {
 	return true
 }
 
+func preserveNullScheduleTimeZone(current types.Object, refreshed *scheduleModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if current.IsNull() || current.IsUnknown() {
+		return diags
+	}
+
+	var currentSchedule scheduleModel
+	diags.Append(current.As(context.Background(), &currentSchedule, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return diags
+	}
+	if currentSchedule.TimeZone.IsNull() {
+		refreshed.TimeZone = types.StringNull()
+	}
+	return diags
+}
+
 // dhcpIpv4Model maps DHCP IPv4 settings schema data
 type dhcpIpv4Model struct {
 	GatewayIp     types.String `tfsdk:"gateway_ip"`
@@ -744,27 +761,15 @@ func (o *configCommonModel) Read(ctx context.Context, adg adguard.ADG, currState
 		return
 	}
 
-	// need special handling for timezone in resource due to inconsistent API response for `Local`
+	// Preserve an explicitly unmanaged time zone. AdGuard Home normalizes an
+	// unset value to its local zone, which must not turn imported or migrated
+	// state into a perpetual diff.
 	if rtype == "resource" && !currState.BlockedServicesPauseSchedule.IsNull() {
-		// last updated will exist on create operation, null on import operation
-		if !currState.LastUpdated.IsNull() {
-			// unpack current state
-			var currStateBlockedServicesPauseScheduleConfig scheduleModel
-			d = currState.BlockedServicesPauseSchedule.As(ctx, &currStateBlockedServicesPauseScheduleConfig, basetypes.ObjectAsOptions{})
-			diags.Append(d...)
-			if diags.HasError() {
-				return
-			}
-			// if timezone in state is null, it means it was never defined, so we should ignore the inconsistent response from ADG
-			if !currStateBlockedServicesPauseScheduleConfig.TimeZone.IsNull() {
-				// map timezone from response
-				stateBlockedServicesPauseScheduleConfig.TimeZone = types.StringValue(blockedServicesPauseSchedule.Schedule.TimeZone)
-			}
-			// ID exists in both create and import operations, but if we got here, it's an import
-			// still, imports for this attribute are finicky and error-prone, therefore ignored in tests
-		} else if !currState.ID.IsNull() {
-			// map timezone from response
-			stateBlockedServicesPauseScheduleConfig.TimeZone = types.StringValue(blockedServicesPauseSchedule.Schedule.TimeZone)
+		stateBlockedServicesPauseScheduleConfig.TimeZone = types.StringValue(blockedServicesPauseSchedule.Schedule.TimeZone)
+		d = preserveNullScheduleTimeZone(currState.BlockedServicesPauseSchedule, &stateBlockedServicesPauseScheduleConfig)
+		diags.Append(d...)
+		if diags.HasError() {
+			return
 		}
 	} else {
 		// used for datasource

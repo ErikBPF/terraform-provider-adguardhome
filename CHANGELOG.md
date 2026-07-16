@@ -7,6 +7,11 @@ Semantic Versioning.
 
 ### Fixed
 
+- Imported or provider-migrated singleton config now converges when
+  `blocked_services_pause_schedule` is explicitly null. Version 0.1.5 is
+  affected by a perpetual diff when AdGuard Home normalizes the unset schedule
+  time zone.
+
 - Config creation now skips AdGuard Home's rejected empty DHCP payload when
   DHCP is absent or disabled.  TLS validation fields and the bookkeeping
   timestamp now converge across unrelated updates and no-op plans.  Version

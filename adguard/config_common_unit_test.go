@@ -121,3 +121,31 @@ func TestNormalizeTlsTimestamp(t *testing.T) {
 		t.Fatalf("real timestamp changed: %q", got)
 	}
 }
+
+func TestPreserveNullScheduleTimeZoneForMigratedState(t *testing.T) {
+	current := types.ObjectValueMust(scheduleModel{}.attrTypes(), scheduleModel{}.defaultObject())
+	refreshed := scheduleModel{TimeZone: types.StringValue("API-default-zone")}
+
+	diags := preserveNullScheduleTimeZone(current, &refreshed)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if !refreshed.TimeZone.IsNull() {
+		t.Fatalf("API default replaced configured null: %v", refreshed.TimeZone)
+	}
+}
+
+func TestPreserveConfiguredScheduleTimeZone(t *testing.T) {
+	values := scheduleModel{}.defaultObject()
+	values["time_zone"] = types.StringValue("Configured/Zone")
+	current := types.ObjectValueMust(scheduleModel{}.attrTypes(), values)
+	refreshed := scheduleModel{TimeZone: types.StringValue("API/Zone")}
+
+	diags := preserveNullScheduleTimeZone(current, &refreshed)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if got := refreshed.TimeZone.ValueString(); got != "API/Zone" {
+		t.Fatalf("configured time zone was not refreshed: %q", got)
+	}
+}
