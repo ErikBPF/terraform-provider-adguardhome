@@ -13,16 +13,10 @@ jobs:
   acceptance:
     uses: ./.github/workflows/testacc.yaml
 
-  approval:
+  release:
     needs: acceptance
     runs-on: ubuntu-latest
     environment: production-release
-    steps:
-      - run: echo "Release approved"
-
-  release:
-    needs: approval
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
