@@ -1,14 +1,14 @@
 terraform {
   required_providers {
-    adguard = {
-      source  = "gmichels/adguard"
-      version = "0.2.0"
+    adguardhome = {
+      source  = "ErikBPF/adguardhome"
+      version = "0.1.0"
     }
   }
 }
 
 # configuration for the provider
-provider "adguard" {
+provider "adguardhome" {
   host     = "localhost:8080"
   username = "admin"
   password = "SecretP@ssw0rd"

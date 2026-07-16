@@ -1,2 +1,2 @@
 # get user rules
-data "adguard_user_rules" "test" {}
+data "adguardhome_user_rules" "test" {}

@@ -1,7 +1,7 @@
 # manage user rules
-# NOTE: there can only be 1 (one) `adguard_user_rules` resource
+# NOTE: there can only be 1 (one) `adguardhome_user_rules` resource
 # specifying multiple resources will result in errors
-resource "adguard_user_rules" "test" {
+resource "adguardhome_user_rules" "test" {
   rules = [
     "! line 1 bang comment",
     "# line 2 respond with 127.0.0.1 for localhost.org (but not for its subdomains)",

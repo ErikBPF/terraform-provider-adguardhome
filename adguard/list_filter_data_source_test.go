@@ -13,31 +13,31 @@ func TestAccListFilterDataSource(t *testing.T) {
 			// Read testing
 			{
 				Config: providerConfig + `
-data "adguard_list_filter" "test_blacklist" {
+data "adguardhome_list_filter" "test_blacklist" {
   name = "Test Blocklist Datasource"
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.adguard_list_filter.test_blacklist", "url", "/opt/adguardhome/work/data/userfilters/list_filter_1.txt"),
-					resource.TestCheckResourceAttr("data.adguard_list_filter.test_blacklist", "enabled", "true"),
-					resource.TestCheckResourceAttr("data.adguard_list_filter.test_blacklist", "whitelist", "false"),
-					resource.TestCheckResourceAttr("data.adguard_list_filter.test_blacklist", "rules_count", "13"),
-					resource.TestCheckResourceAttr("data.adguard_list_filter.test_blacklist", "id", "1"),
+					resource.TestCheckResourceAttr("data.adguardhome_list_filter.test_blacklist", "url", "/opt/adguardhome/work/data/userfilters/list_filter_1.txt"),
+					resource.TestCheckResourceAttr("data.adguardhome_list_filter.test_blacklist", "enabled", "true"),
+					resource.TestCheckResourceAttr("data.adguardhome_list_filter.test_blacklist", "whitelist", "false"),
+					resource.TestCheckResourceAttr("data.adguardhome_list_filter.test_blacklist", "rules_count", "13"),
+					resource.TestCheckResourceAttr("data.adguardhome_list_filter.test_blacklist", "id", "1"),
 				),
 			},
 			{
 				Config: providerConfig + `
-data "adguard_list_filter" "test_whitelist" {
+data "adguardhome_list_filter" "test_whitelist" {
   name      = "Test Whitelist Datasource"
   whitelist = true
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.adguard_list_filter.test_whitelist", "url", "/opt/adguardhome/work/data/userfilters/list_filter_2.txt"),
-					resource.TestCheckResourceAttr("data.adguard_list_filter.test_whitelist", "enabled", "false"),
-					resource.TestCheckResourceAttr("data.adguard_list_filter.test_whitelist", "whitelist", "true"),
-					resource.TestCheckResourceAttr("data.adguard_list_filter.test_whitelist", "rules_count", "0"),
-					resource.TestCheckResourceAttr("data.adguard_list_filter.test_whitelist", "id", "3"),
+					resource.TestCheckResourceAttr("data.adguardhome_list_filter.test_whitelist", "url", "/opt/adguardhome/work/data/userfilters/list_filter_2.txt"),
+					resource.TestCheckResourceAttr("data.adguardhome_list_filter.test_whitelist", "enabled", "false"),
+					resource.TestCheckResourceAttr("data.adguardhome_list_filter.test_whitelist", "whitelist", "true"),
+					resource.TestCheckResourceAttr("data.adguardhome_list_filter.test_whitelist", "rules_count", "0"),
+					resource.TestCheckResourceAttr("data.adguardhome_list_filter.test_whitelist", "id", "3"),
 				),
 			},
 		},

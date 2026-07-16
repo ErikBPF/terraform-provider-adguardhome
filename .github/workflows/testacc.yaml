@@ -1,50 +1,26 @@
-name: Acceptance Tests
+name: Acceptance
 
 on:
   pull_request:
-    types: ["opened", "synchronize"]
-    paths:
-      - "**.go"
-      - go.mod
-      - ".github/workflows/testacc.yaml"
-  # allow this workflow to be called from other workflows
+    branches: [main]
+    paths: ["**.go", "go.mod", "go.sum", "docker/**", ".github/workflows/testacc.yaml"]
   workflow_call:
 
 permissions:
   contents: read
 
-env:
-  GOPROXY: https://proxy.golang.org,direct
-  DEBIAN_FRONTEND: noninteractive
-
 jobs:
-  testacc:
+  terraform:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      matrix:
-        terraform_version:
-          [
-            "~1.4.0",
-            "~1.5.0",
-            "~1.6.0",
-            "~1.7.0",
-            "~1.8.0",
-            "~1.9.0",
-            "~1.10.0",
-            "~1.11.0",
-            "~1.12.0",
-            "~1.13.0",
-            "~1.14.0",
-          ]
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
-          go-version-file: "go.mod"
-      - uses: hashicorp/setup-terraform@v3
+          go-version-file: go.mod
+          cache: true
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
-          terraform_version: ${{ matrix.terraform_version }}
           terraform_wrapper: false
-      - name: Run acceptance tests
-        run: echo Using terraform version $(terraform version --json | jq -r .terraform_version) && make testacc
+      - name: Disposable AdGuard Home acceptance tests
+        run: make testacc

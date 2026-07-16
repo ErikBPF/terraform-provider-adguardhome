@@ -1,4 +1,4 @@
 # get a client
-data "adguard_client" "test" {
+data "adguardhome_client" "test" {
   name = "Test Client Data Source"
 }

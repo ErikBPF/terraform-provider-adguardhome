@@ -13,17 +13,17 @@ func TestAccRewriteDataSource(t *testing.T) {
 			// Read testing
 			{
 				Config: providerConfig + `
-data "adguard_rewrite" "test" {
+data "adguardhome_rewrite" "test" {
 	domain = "example.org"
 	answer = "1.2.3.4"
 }`,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.adguard_rewrite.test", "domain", "example.org"),
-					resource.TestCheckResourceAttr("data.adguard_rewrite.test", "answer", "1.2.3.4"),
-					resource.TestCheckResourceAttr("data.adguard_rewrite.test", "enabled", "true"),
+					resource.TestCheckResourceAttr("data.adguardhome_rewrite.test", "domain", "example.org"),
+					resource.TestCheckResourceAttr("data.adguardhome_rewrite.test", "answer", "1.2.3.4"),
+					resource.TestCheckResourceAttr("data.adguardhome_rewrite.test", "enabled", "true"),
 
 					// Verify placeholder id attribute
-					resource.TestCheckResourceAttr("data.adguard_rewrite.test", "id", "placeholder"),
+					resource.TestCheckResourceAttr("data.adguardhome_rewrite.test", "id", "placeholder"),
 				),
 			},
 		},

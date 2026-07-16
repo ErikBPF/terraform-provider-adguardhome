@@ -13,23 +13,23 @@ func TestAccClientResource(t *testing.T) {
 			// Create and Read testing
 			{
 				Config: providerConfig + `
-resource "adguard_client" "test" {
+resource "adguardhome_client" "test" {
   name = "Test Client"
   ids  = ["192.168.100.15", "test-client"]
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("adguard_client.test", "name", "Test Client"),
-					resource.TestCheckResourceAttr("adguard_client.test", "ids.#", "2"),
-					resource.TestCheckResourceAttr("adguard_client.test", "ids.1", "test-client"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "name", "Test Client"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "ids.#", "2"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "ids.1", "test-client"),
 					// Verify dynamic values have any value set in the state.
-					resource.TestCheckResourceAttrSet("adguard_client.test", "id"),
-					resource.TestCheckResourceAttrSet("adguard_client.test", "last_updated"),
+					resource.TestCheckResourceAttrSet("adguardhome_client.test", "id"),
+					resource.TestCheckResourceAttrSet("adguardhome_client.test", "last_updated"),
 				),
 			},
 			// ImportState testing
 			{
-				ResourceName:      "adguard_client.test",
+				ResourceName:      "adguardhome_client.test",
 				ImportState:       true,
 				ImportStateVerify: true,
 				// The last_updated attribute does not exist in AdGuard Home,
@@ -44,7 +44,7 @@ resource "adguard_client" "test" {
 			// Update and Read testing
 			{
 				Config: providerConfig + `
-resource "adguard_client" "test" {
+resource "adguardhome_client" "test" {
 	name = "Test Client"
 	ids  = ["192.168.100.15", "test-client", "another-test-client"]
 	safesearch = {
@@ -70,35 +70,35 @@ resource "adguard_client" "test" {
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("adguard_client.test", "ids.#", "3"),
-					resource.TestCheckResourceAttr("adguard_client.test", "ids.1", "another-test-client"),
-					resource.TestCheckResourceAttr("adguard_client.test", "safesearch.enabled", "true"),
-					resource.TestCheckResourceAttr("adguard_client.test", "safesearch.services.#", "1"),
-					resource.TestCheckResourceAttr("adguard_client.test", "safesearch.services.0", "bing"),
-					resource.TestCheckResourceAttr("adguard_client.test", "blocked_services.#", "2"),
-					resource.TestCheckResourceAttr("adguard_client.test", "blocked_services.0", "9gag"),
-					resource.TestCheckResourceAttr("adguard_client.test", "blocked_services_pause_schedule.time_zone", "America/New_York"),
-					resource.TestCheckResourceAttr("adguard_client.test", "blocked_services_pause_schedule.sat.start", "11:37"),
-					resource.TestCheckResourceAttr("adguard_client.test", "blocked_services_pause_schedule.sat.end", "13:15"),
-					resource.TestCheckResourceAttr("adguard_client.test", "blocked_services_pause_schedule.sun.start", "10:00"),
-					resource.TestCheckResourceAttr("adguard_client.test", "blocked_services_pause_schedule.sun.end", "19:41"),
-					resource.TestCheckResourceAttr("adguard_client.test", "ignore_querylog", "true"),
-					resource.TestCheckResourceAttr("adguard_client.test", "upstreams_cache_enabled", "true"),
-					resource.TestCheckResourceAttr("adguard_client.test", "upstreams_cache_size", "12345"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "ids.#", "3"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "ids.1", "another-test-client"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "safesearch.enabled", "true"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "safesearch.services.#", "1"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "safesearch.services.0", "bing"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "blocked_services.#", "2"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "blocked_services.0", "9gag"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "blocked_services_pause_schedule.time_zone", "America/New_York"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "blocked_services_pause_schedule.sat.start", "11:37"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "blocked_services_pause_schedule.sat.end", "13:15"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "blocked_services_pause_schedule.sun.start", "10:00"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "blocked_services_pause_schedule.sun.end", "19:41"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "ignore_querylog", "true"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "upstreams_cache_enabled", "true"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "upstreams_cache_size", "12345"),
 				),
 			},
 			// Update client name testing (requires recreate)
 			{
 				Config: providerConfig + `
-resource "adguard_client" "test" {
+resource "adguardhome_client" "test" {
   name = "Test Client Name Updated"
   ids  = ["192.168.100.15", "test-client", "another-test-client"]
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("adguard_client.test", "name", "Test Client Name Updated"),
-					resource.TestCheckResourceAttr("adguard_client.test", "ids.#", "3"),
-					resource.TestCheckResourceAttr("adguard_client.test", "ids.1", "another-test-client"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "name", "Test Client Name Updated"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "ids.#", "3"),
+					resource.TestCheckResourceAttr("adguardhome_client.test", "ids.1", "another-test-client"),
 				),
 			},
 			// Delete testing automatically occurs in TestCase

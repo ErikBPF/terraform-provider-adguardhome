@@ -1,4 +1,4 @@
-module github.com/gmichels/terraform-provider-adguard
+module github.com/ErikBPF/terraform-provider-adguardhome
 
 go 1.25.4
 

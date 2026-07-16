@@ -11,7 +11,7 @@ const (
 	// It is also possible to use the ADGUARD_ environment variables instead,
 	// such as updating the Makefile and running the testing through that tool
 	providerConfig = `
-provider "adguard" {
+provider "adguardhome" {
   host     = "localhost:8080"
   username = "admin"
   password = "SecretP@ssw0rd"
@@ -21,7 +21,7 @@ provider "adguard" {
 `
 	// use for testing connecting to an insecure server
 	providerConfigInsecure = `
-provider "adguard" {
+provider "adguardhome" {
   host     = "localhost:8443"
   username = "admin"
   password = "SecretP@ssw0rd"
@@ -38,6 +38,6 @@ var (
 	// CLI command executed to create a provider server to which the CLI can
 	// reattach.
 	testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-		"adguard": providerserver.NewProtocol6WithError(New()),
+		"adguardhome": providerserver.NewProtocol6WithError(New()),
 	}
 )

@@ -281,6 +281,36 @@ func (o dhcpConfigModel) defaultObject() map[string]attr.Value {
 	}
 }
 
+// normalizeDisabledDhcpStatus keeps refreshes stable when AdGuard returns
+// retained DHCP settings even though its DHCP server is disabled.  Those
+// retained values cannot be applied back through set_config while disabled.
+func normalizeDisabledDhcpStatus(status adgmodels.DhcpStatus) adgmodels.DhcpStatus {
+	if status.Enabled {
+		return status
+	}
+
+	status.InterfaceName = ""
+	status.V4 = adgmodels.DhcpConfigV4{LeaseDuration: uint64(CONFIG_DHCP_V4_LEASE_DURATION)}
+	status.V6 = adgmodels.DhcpConfigV6{LeaseDuration: uint64(CONFIG_DHCP_V6_LEASE_DURATION)}
+	status.StaticLeases = nil
+	return status
+}
+
+// shouldSetDhcpConfig avoids sending AdGuard an incomplete disabled-DHCP
+// payload during an unrelated singleton configuration update.
+func shouldSetDhcpConfig(planned types.Bool, current types.Object) bool {
+	if planned.IsNull() || planned.IsUnknown() || current.IsNull() || current.IsUnknown() {
+		return true
+	}
+
+	currentEnabled, ok := current.Attributes()["enabled"].(types.Bool)
+	if !ok || currentEnabled.IsNull() || currentEnabled.IsUnknown() {
+		return true
+	}
+
+	return planned.ValueBool() || currentEnabled.ValueBool()
+}
+
 // dhcpIpv4Model maps DHCP IPv4 settings schema data
 type dhcpIpv4Model struct {
 	GatewayIp     types.String `tfsdk:"gateway_ip"`
@@ -445,6 +475,13 @@ func (o tlsConfigModel) defaultObject() map[string]attr.Value {
 		"warning_validation": types.StringValue(""),
 		"serve_plain_dns":    types.BoolValue(CONFIG_TLS_SERVE_PLAIN_DNS),
 	}
+}
+
+func normalizeTlsTimestamp(value string) string {
+	if value == "0001-01-01T00:00:00Z" {
+		return ""
+	}
+	return value
 }
 
 // common `Read` function for both data source and resource
@@ -894,6 +931,10 @@ func (o *configCommonModel) Read(ctx context.Context, adg adguard.ADG, currState
 		"object": "dhcpStatus",
 		"body":   string(dhcpStatusJson),
 	})
+	if rtype == "resource" {
+		normalizedDhcpStatus := normalizeDisabledDhcpStatus(*dhcpStatus)
+		dhcpStatus = &normalizedDhcpStatus
+	}
 	// parse double-nested attributes first
 	var stateDhcpIpv4Config dhcpIpv4Model
 	stateDhcpIpv4Config.GatewayIp = types.StringValue(dhcpStatus.V4.GatewayIp)
@@ -997,19 +1038,10 @@ func (o *configCommonModel) Read(ctx context.Context, adg adguard.ADG, currState
 		)
 		return
 	}
-	// convert to JSON for response logging
-	tlsConfigJson, err := json.Marshal(tlsConfig)
-	if err != nil {
-		diags.AddError(
-			"Unable to Parse AdGuard Home Config",
-			err.Error(),
-		)
-		return
-	}
-	// log response body
+	// TLS status may contain certificate or private-key material. Never attach
+	// its response body to provider diagnostics or logs.
 	tflog.Debug(ctx, "ADG API response", map[string]interface{}{
 		"object": "tlsConfig",
-		"body":   string(tlsConfigJson),
 	})
 	// map filter config to state
 	var stateTlsConfig tlsConfigModel
@@ -1040,18 +1072,8 @@ func (o *configCommonModel) Read(ctx context.Context, adg adguard.ADG, currState
 	stateTlsConfig.ValidChain = types.BoolValue(tlsConfig.ValidChain)
 	stateTlsConfig.Subject = types.StringValue(tlsConfig.Subject)
 	stateTlsConfig.Issuer = types.StringValue(tlsConfig.Issuer)
-	// handle default timestamp from upstream
-	if tlsConfig.NotBefore != "0001-01-01T00:00:00Z" {
-		stateTlsConfig.NotBefore = types.StringValue(tlsConfig.NotBefore)
-	} else {
-		stateTlsConfig.NotBefore = types.StringValue("")
-	}
-	// handle default timestamp from upstream
-	if tlsConfig.NotAfter != "0001-01-01T00:00:00Z" {
-		stateTlsConfig.NotAfter = types.StringValue(tlsConfig.NotAfter)
-	} else {
-		stateTlsConfig.NotAfter = types.StringValue("")
-	}
+	stateTlsConfig.NotBefore = types.StringValue(normalizeTlsTimestamp(tlsConfig.NotBefore))
+	stateTlsConfig.NotAfter = types.StringValue(normalizeTlsTimestamp(tlsConfig.NotAfter))
 	if len(tlsConfig.DnsNames) > 0 {
 		stateTlsConfig.DnsNames, d = types.ListValueFrom(ctx, types.StringType, tlsConfig.DnsNames)
 		diags.Append(d...)
@@ -1456,14 +1478,19 @@ func (r *configResource) CreateOrUpdate(ctx context.Context, plan *configCommonM
 	dhcpConfig.V6.RangeStart = planDhcpIpv6Settings.RangeStart.ValueString()
 	dhcpConfig.V6.LeaseDuration = uint64(planDhcpIpv6Settings.LeaseDuration.ValueInt64())
 
-	// set dhcp config using plan
-	err = r.adg.DhcpSetConfig(dhcpConfig)
-	if err != nil {
-		diags.AddError(
-			"Unable to Update AdGuard Home Config",
-			err.Error(),
-		)
-		return
+	// Do not send AdGuard its default/empty DHCP object when both the current
+	// and planned states are disabled.  The API rejects that payload, and an
+	// unrelated config update must not mutate DHCP.
+	writeDhcpConfig := shouldSetDhcpConfig(planDhcpConfig.Enabled, state.Dhcp)
+	if writeDhcpConfig {
+		err = r.adg.DhcpSetConfig(dhcpConfig)
+		if err != nil {
+			diags.AddError(
+				"Unable to Update AdGuard Home Config",
+				err.Error(),
+			)
+			return
+		}
 	}
 
 	// initialize variables related to state
@@ -1474,7 +1501,7 @@ func (r *configResource) CreateOrUpdate(ctx context.Context, plan *configCommonM
 	// check if we had dhcp config previously in state
 	if !state.Dhcp.IsNull() {
 		// check if the entire dhcp server has been turned off
-		if dhcpConfig.InterfaceName == "" {
+		if writeDhcpConfig && dhcpConfig.InterfaceName == "" {
 			// it was, set dhcp config to defaults
 			err = r.adg.DhcpReset()
 			if err != nil {
@@ -1629,8 +1656,8 @@ func (r *configResource) CreateOrUpdate(ctx context.Context, plan *configCommonM
 	planTlsConfig.KeyType = types.StringValue(tlsConfigResponse.KeyType)
 	planTlsConfig.Subject = types.StringValue(tlsConfigResponse.Subject)
 	planTlsConfig.Issuer = types.StringValue(tlsConfigResponse.Issuer)
-	planTlsConfig.NotBefore = types.StringValue(tlsConfigResponse.NotBefore)
-	planTlsConfig.NotAfter = types.StringValue(tlsConfigResponse.NotAfter)
+	planTlsConfig.NotBefore = types.StringValue(normalizeTlsTimestamp(tlsConfigResponse.NotBefore))
+	planTlsConfig.NotAfter = types.StringValue(normalizeTlsTimestamp(tlsConfigResponse.NotAfter))
 	planTlsConfig.DnsNames, d = types.ListValueFrom(ctx, types.StringType, tlsConfig.DnsNames)
 	diags.Append(d...)
 	if diags.HasError() {

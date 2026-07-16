@@ -37,7 +37,14 @@ type adguardProvider struct{}
 
 // Metadata returns the provider type name
 func (p *adguardProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "adguard"
+	resp.TypeName = "adguardhome"
+}
+
+func environmentValue(primary, legacy string) string {
+	if value := os.Getenv(primary); value != "" {
+		return value
+	}
+	return os.Getenv(legacy)
 }
 
 // Schema defines the provider-level schema for configuration data
@@ -113,7 +120,7 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("host"),
 			"Unknown AdGuard Home Host",
 			"The provider cannot create the AdGuard Home client as there is an unknown configuration value for the AdGuard Home host. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the ADGUARD_HOST environment variable.",
+				"Either target apply the source of the value first, set the value statically in the configuration, or use ADGUARDHOME_HOST (legacy ADGUARD_HOST is also supported).",
 		)
 	}
 
@@ -122,7 +129,7 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("username"),
 			"Unknown AdGuard Home Username",
 			"The provider cannot create the AdGuard Home client as there is an unknown configuration value for the AdGuard Home username. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the ADGUARD_USERNAME environment variable.",
+				"Either target apply the source of the value first, set the value statically in the configuration, or use ADGUARDHOME_USERNAME (legacy ADGUARD_USERNAME is also supported).",
 		)
 	}
 
@@ -131,7 +138,7 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("password"),
 			"Unknown AdGuard Home Password",
 			"The provider cannot create the AdGuard Home client as there is an unknown configuration value for the AdGuard Home password. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the ADGUARD_PASSWORD environment variable.",
+				"Either target apply the source of the value first, set the value statically in the configuration, or use ADGUARDHOME_PASSWORD (legacy ADGUARD_PASSWORD is also supported).",
 		)
 	}
 
@@ -140,7 +147,7 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("scheme"),
 			"Unknown AdGuard Home Scheme",
 			"The provider cannot create the AdGuard Home client as there is an unknown configuration value for the AdGuard Home scheme. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the ADGUARD_SCHEME environment variable.",
+				"Either target apply the source of the value first, set the value statically in the configuration, or use ADGUARDHOME_SCHEME (legacy ADGUARD_SCHEME is also supported).",
 		)
 	}
 
@@ -149,7 +156,7 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("timeout"),
 			"Unknown AdGuard Home Timeout",
 			"The provider cannot create the AdGuard Home client as there is an unknown configuration value for the AdGuard Home timeout. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the ADGUARD_TIMEOUT environment variable.",
+				"Either target apply the source of the value first, set the value statically in the configuration, or use ADGUARDHOME_TIMEOUT (legacy ADGUARD_TIMEOUT is also supported).",
 		)
 	}
 
@@ -158,7 +165,7 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("insecure"),
 			"Unknown AdGuard Home Insecure Value",
 			"The provider cannot create the AdGuard Home client as there is an unknown configuration value for the AdGuard Home insecure attribute. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the ADGUARD_INSECURE environment variable.",
+				"Either target apply the source of the value first, set the value statically in the configuration, or use ADGUARDHOME_INSECURE (legacy ADGUARD_INSECURE is also supported).",
 		)
 	}
 
@@ -167,19 +174,19 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 	}
 
 	// default values to environment variables, but override with Terraform configuration value if set
-	host := os.Getenv("ADGUARD_HOST")
-	username := os.Getenv("ADGUARD_USERNAME")
-	password := os.Getenv("ADGUARD_PASSWORD")
-	scheme := os.Getenv("ADGUARD_SCHEME")
+	host := environmentValue("ADGUARDHOME_HOST", "ADGUARD_HOST")
+	username := environmentValue("ADGUARDHOME_USERNAME", "ADGUARD_USERNAME")
+	password := environmentValue("ADGUARDHOME_PASSWORD", "ADGUARD_PASSWORD")
+	scheme := environmentValue("ADGUARDHOME_SCHEME", "ADGUARD_SCHEME")
 	// sanity check for scheme when provided via env variable
 	if scheme != "" && scheme != "http" && scheme != "https" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("scheme"),
 			"Unable to parse AdGuard Home Scheme value",
-			"The provider cannot create the AdGuard Home client as the provided value for ADGUARD_SCHEME needs to be either `http` or `https`.")
+			"The provider cannot create the AdGuard Home client because ADGUARDHOME_SCHEME (or legacy ADGUARD_SCHEME) must be either `http` or `https`.")
 		return
 	}
-	timeout_env := os.Getenv("ADGUARD_TIMEOUT")
+	timeout_env := environmentValue("ADGUARDHOME_TIMEOUT", "ADGUARD_TIMEOUT")
 	// sanity check for timeout when provided via env variable
 	var timeout int
 	if timeout_env != "" {
@@ -189,13 +196,13 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 			resp.Diagnostics.AddAttributeError(
 				path.Root("timeout"),
 				"Unable to parse AdGuard Home Timeout value",
-				"The provider cannot create the AdGuard Home client as it was unable to parse the provided value for ADGUARD_TIMEOUT.")
+				"The provider cannot parse ADGUARDHOME_TIMEOUT (or legacy ADGUARD_TIMEOUT).")
 			return
 		} else if timeout <= 0 || timeout > MAX_TIMEOUT {
 			resp.Diagnostics.AddAttributeError(
 				path.Root("timeout"),
 				"Unable to parse AdGuard Home Timeout value",
-				"The provider cannot create the AdGuard Home client as the provided value for ADGUARD_TIMEOUT was outside the acceptable range (1, "+strconv.Itoa(MAX_TIMEOUT)+").")
+				"ADGUARDHOME_TIMEOUT (or legacy ADGUARD_TIMEOUT) must be within the acceptable range (1, "+strconv.Itoa(MAX_TIMEOUT)+").")
 			return
 		}
 	}
@@ -203,7 +210,7 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 	// set default for insecure
 	insecure := false
 
-	insecure_env := os.Getenv("ADGUARD_INSECURE")
+	insecure_env := environmentValue("ADGUARDHOME_INSECURE", "ADGUARD_INSECURE")
 	// sanity check for insecure when provided via env variable
 	if insecure_env != "" {
 		var err error
@@ -212,7 +219,7 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 			resp.Diagnostics.AddAttributeError(
 				path.Root("insecure"),
 				"Unable to parse AdGuard Home Insecure value",
-				"The provider cannot create the AdGuard Home client as it was unable to parse the provided value for ADGUARD_INSECURE.")
+				"The provider cannot parse ADGUARDHOME_INSECURE (or legacy ADGUARD_INSECURE).")
 			return
 		}
 	}
@@ -247,7 +254,7 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("host"),
 			"Missing AdGuard Home Host",
 			"The provider cannot create the AdGuard Home client as there is a missing or empty value for the AdGuard Home host. "+
-				"Set the host value in the configuration or use the ADGUARD_HOST environment variable. "+
+				"Set host in the configuration or use ADGUARDHOME_HOST (legacy ADGUARD_HOST is also supported). "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -257,7 +264,7 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("username"),
 			"Missing AdGuard Home Username",
 			"The provider cannot create the AdGuard Home client as there is a missing or empty value for the AdGuard Home username. "+
-				"Set the username value in the configuration or use the ADGUARD_USERNAME environment variable. "+
+				"Set username in the configuration or use ADGUARDHOME_USERNAME (legacy ADGUARD_USERNAME is also supported). "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -267,7 +274,7 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("password"),
 			"Missing AdGuard Home Password",
 			"The provider cannot create the AdGuard Home client as there is a missing or empty value for the AdGuard Home password. "+
-				"Set the password value in the configuration or use the ADGUARD_PASSWORD environment variable. "+
+				"Set password in the configuration or use ADGUARDHOME_PASSWORD (legacy ADGUARD_PASSWORD is also supported). "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -286,13 +293,10 @@ func (p *adguardProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	ctx = tflog.SetField(ctx, "adguard_host", host)
-	ctx = tflog.SetField(ctx, "adguard_username", username)
-	ctx = tflog.SetField(ctx, "adguard_password", password)
-	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, "adguard_password")
-	ctx = tflog.SetField(ctx, "adguard_scheme", scheme)
-	ctx = tflog.SetField(ctx, "adguard_timeout", timeout)
-	ctx = tflog.SetField(ctx, "adguard_insecure", insecure)
+	ctx = tflog.SetField(ctx, "adguardhome_host", host)
+	ctx = tflog.SetField(ctx, "adguardhome_scheme", scheme)
+	ctx = tflog.SetField(ctx, "adguardhome_timeout", timeout)
+	ctx = tflog.SetField(ctx, "adguardhome_insecure", insecure)
 
 	tflog.Debug(ctx, "Creating AdGuard Home client")
 

@@ -1,5 +1,5 @@
 # configuration for the provider
-provider "adguard" {
+provider "adguardhome" {
   host     = "localhost:8080"
   username = "admin"
   password = "SecretP@ssw0rd"

@@ -1,7 +1,7 @@
 # manage the server configuration
-# NOTE: there can only be 1 (one) `adguard_config` resource
+# NOTE: there can only be 1 (one) `adguardhome_config` resource
 # specifying multiple resources will result in errors
-resource "adguard_config" "test" {
+resource "adguardhome_config" "test" {
   filtering = {
     update_interval = 1
   }

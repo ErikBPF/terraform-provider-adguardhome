@@ -1,2 +1,2 @@
 # get the server configuration
-data "adguard_config" "test" {}
+data "adguardhome_config" "test" {}

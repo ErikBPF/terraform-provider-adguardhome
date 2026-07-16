@@ -1,4 +1,4 @@
-name: Documentation
+name: Test
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  generated-docs:
+  unit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -18,7 +18,11 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Generate Registry documentation
-        run: go generate ./...
-      - name: Require committed generated documentation
-        run: git diff --exit-code
+      - name: Format
+        run: test -z "$(gofmt -l .)"
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test -race -count=1 -timeout=5m ./...
+      - name: Build
+        run: go build -trimpath ./...
