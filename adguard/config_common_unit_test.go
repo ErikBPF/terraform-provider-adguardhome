@@ -81,25 +81,28 @@ func TestShouldSetDhcpConfig(t *testing.T) {
 	}
 }
 
-func TestRuntimeComputedStringsUsePriorStateDuringPlan(t *testing.T) {
+func TestMutableRuntimeStringsRemainComputedDuringPlan(t *testing.T) {
 	var response resource.SchemaResponse
 	(&configResource{}).Schema(context.Background(), resource.SchemaRequest{}, &response)
 
-	assertModifier := func(name string, attribute schema.Attribute) {
+	assertComputed := func(name string, attribute schema.Attribute) {
 		t.Helper()
 		stringAttribute, ok := attribute.(schema.StringAttribute)
 		if !ok {
 			t.Fatalf("%s is not a string attribute", name)
 		}
-		if len(stringAttribute.PlanModifiers) == 0 {
-			t.Fatalf("%s has no state-preserving plan modifier", name)
+		if !stringAttribute.Computed {
+			t.Fatalf("%s is not computed", name)
+		}
+		if len(stringAttribute.PlanModifiers) != 0 {
+			t.Fatalf("%s must be unknown during updates so apply can refresh it", name)
 		}
 	}
 
-	assertModifier("last_updated", response.Schema.Attributes["last_updated"])
+	assertComputed("last_updated", response.Schema.Attributes["last_updated"])
 	tlsAttribute := response.Schema.Attributes["tls"].(schema.SingleNestedAttribute)
 	for _, name := range []string{"issuer", "key_type", "not_after", "not_before", "subject", "warning_validation"} {
-		assertModifier("tls."+name, tlsAttribute.Attributes[name])
+		assertComputed("tls."+name, tlsAttribute.Attributes[name])
 	}
 }
 

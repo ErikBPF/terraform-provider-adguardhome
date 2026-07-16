@@ -65,9 +65,6 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"last_updated": schema.StringAttribute{
 				Description: "Timestamp of the last Terraform update of the config",
 				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"filtering": schema.SingleNestedAttribute{
 				Computed: true,
@@ -721,37 +718,22 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					"key_type": schema.StringAttribute{
 						Description: "The private key type, either `RSA` or `ECDSA`",
 						Computed:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"subject": schema.StringAttribute{
 						Description: "The subject of the first certificate in the chain",
 						Computed:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"issuer": schema.StringAttribute{
 						Description: "The issuer of the first certificate in the chain",
 						Computed:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"not_before": schema.StringAttribute{
 						Description: "The NotBefore field of the first certificate in the chain",
 						Computed:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"not_after": schema.StringAttribute{
 						Description: "The NotAfter field of the first certificate in the chain",
 						Computed:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"dns_names": schema.ListAttribute{
 						Description: "The value of SubjectAltNames field of the first certificate in the chain",
@@ -761,9 +743,6 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					"warning_validation": schema.StringAttribute{
 						Description: "The validation warning message with the issue description",
 						Computed:    true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.UseStateForUnknown(),
-						},
 					},
 					"serve_plain_dns": schema.BoolAttribute{
 						Description: fmt.Sprintf("When `true`, plain DNS is allowed for incoming requests. Defaults to `%t`", CONFIG_TLS_SERVE_PLAIN_DNS),

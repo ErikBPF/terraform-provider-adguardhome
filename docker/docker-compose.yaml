@@ -11,3 +11,12 @@ services:
       - "8080:8080/tcp"
       - "8443:443/tcp"
       - "3000:3000/tcp"
+    networks:
+      adguardhome:
+        ipv4_address: 192.168.250.2
+
+networks:
+  adguardhome:
+    ipam:
+      config:
+        - subnet: 192.168.250.0/24

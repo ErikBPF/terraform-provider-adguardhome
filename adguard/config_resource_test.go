@@ -61,7 +61,8 @@ resource "adguardhome_config" "test" {
 		allowed_clients            = ["allowed-client", "192.168.200.200"]
 	}
 	dhcp = {
-		interface = "eth1"
+		enabled   = true
+		interface = "eth0"
 		ipv4_settings = {
 			gateway_ip     = "192.168.250.1"
 			subnet_mask    = "255.255.255.0"
@@ -143,7 +144,8 @@ resource "adguardhome_config" "test" {
 					resource.TestCheckResourceAttr("adguardhome_config.test", "dns.upstream_timeout", "10"),
 					resource.TestCheckResourceAttr("adguardhome_config.test", "dns.allowed_clients.#", "2"),
 					resource.TestCheckResourceAttr("adguardhome_config.test", "dns.allowed_clients.1", "allowed-client"),
-					resource.TestCheckResourceAttr("adguardhome_config.test", "dhcp.interface", "eth1"),
+					resource.TestCheckResourceAttr("adguardhome_config.test", "dhcp.enabled", "true"),
+					resource.TestCheckResourceAttr("adguardhome_config.test", "dhcp.interface", "eth0"),
 					resource.TestCheckResourceAttr("adguardhome_config.test", "dhcp.ipv4_settings.gateway_ip", "192.168.250.1"),
 					resource.TestCheckResourceAttr("adguardhome_config.test", "dhcp.ipv4_settings.range_start", "192.168.250.10"),
 					resource.TestCheckResourceAttr("adguardhome_config.test", "dhcp.ipv4_settings.range_end", "192.168.250.100"),
@@ -211,7 +213,8 @@ resource "adguardhome_config" "test" {
 		disallowed_clients        = ["blocked-client", "172.16.0.0/16"]
 	}
 	dhcp = {
-		interface = "eth1"
+		enabled   = true
+		interface = "eth0"
 		ipv4_settings = {
 			gateway_ip     = "192.168.250.1"
 			subnet_mask    = "255.255.255.0"
