@@ -43,6 +43,9 @@ jobs:
       - name: Validate and locate Registry release checksums
         id: checksum
         run: |
+          checksum_file=$(find dist -maxdepth 1 -type f -name '*_SHA256SUMS')
+          manifest_name=$(basename "${checksum_file%_SHA256SUMS}_manifest.json")
+          cp -- terraform-registry-manifest.json "dist/$manifest_name"
           checksum_file=$(scripts/verify-release-checksums.sh dist)
           echo "path=$checksum_file" >> "$GITHUB_OUTPUT"
       - name: Attest release checksums
