@@ -10,6 +10,10 @@ Semantic Versioning.
 - Registry checksums now cover only the 13 provider archives and manifest;
   SPDX SBOMs remain separate release assets. Versions 0.1.1 and 0.1.2 are
   affected by checksums that incorrectly reference SBOM assets.
+- Release 0.1.3 has valid Registry checksums and signatures, but is affected by
+  missing GitHub provenance: its post-release validation looked for the
+  renamed Registry manifest in `dist/` instead of its GoReleaser source path,
+  so the attestation step did not run.
 
 ## [0.1.0] - 2026-07-16
 
