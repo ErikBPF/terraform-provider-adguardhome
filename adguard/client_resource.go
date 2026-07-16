@@ -28,7 +28,12 @@ var (
 	_ resource.Resource                = &clientResource{}
 	_ resource.ResourceWithConfigure   = &clientResource{}
 	_ resource.ResourceWithImportState = &clientResource{}
+	_ resource.ResourceWithMoveState   = &clientResource{}
 )
+
+func (r *clientResource) MoveState(ctx context.Context) []resource.StateMover {
+	return []resource.StateMover{legacyStateMover("adguard_client", resourceSchema(ctx, r), func() any { return &clientCommonModel{} })}
+}
 
 // clientResource is the resource implementation
 type clientResource struct {

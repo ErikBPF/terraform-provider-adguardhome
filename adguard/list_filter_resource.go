@@ -23,7 +23,12 @@ var (
 	_ resource.Resource                = &listFilterResource{}
 	_ resource.ResourceWithConfigure   = &listFilterResource{}
 	_ resource.ResourceWithImportState = &listFilterResource{}
+	_ resource.ResourceWithMoveState   = &listFilterResource{}
 )
+
+func (r *listFilterResource) MoveState(ctx context.Context) []resource.StateMover {
+	return []resource.StateMover{legacyStateMover("adguard_list_filter", resourceSchema(ctx, r), func() any { return &listFilterResourceModel{} })}
+}
 
 // listFilterResource is the resource implementation
 type listFilterResource struct {

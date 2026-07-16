@@ -21,7 +21,12 @@ var (
 	_ resource.Resource                = &userRulesResource{}
 	_ resource.ResourceWithConfigure   = &userRulesResource{}
 	_ resource.ResourceWithImportState = &userRulesResource{}
+	_ resource.ResourceWithMoveState   = &userRulesResource{}
 )
+
+func (r *userRulesResource) MoveState(ctx context.Context) []resource.StateMover {
+	return []resource.StateMover{legacyStateMover("adguard_user_rules", resourceSchema(ctx, r), func() any { return &userRulesResourceModel{} })}
+}
 
 // userRulesResource is the resource implementation
 type userRulesResource struct {

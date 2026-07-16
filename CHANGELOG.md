@@ -5,6 +5,11 @@ Semantic Versioning.
 
 ## Unreleased
 
+### Added
+
+- State move support from all five legacy `adguard_*` resource types after
+  migrating from `gmichels/adguard` to `ErikBPF/adguardhome`.
+
 ### Fixed
 
 - Imported or provider-migrated singleton config now converges when
