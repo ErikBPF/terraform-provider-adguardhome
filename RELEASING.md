@@ -29,7 +29,7 @@ workflow output, issue text, or release notes.
 
 The release signing key is published at
 [`docs/release-signing-key.asc`](docs/release-signing-key.asc), with fingerprint
-`3BBA 541A 5711 3648 3E63 ECFF D695 D331 7C13 4561`.
+`F3E3 89BA E314 FA1C EE23 C06E 6458 8A33 7187 C497`.
 
 1. Download the checksum file and detached GPG signature from the release.
 2. Verify the signature with the published maintainer key.
