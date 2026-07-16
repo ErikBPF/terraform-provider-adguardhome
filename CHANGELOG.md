@@ -7,6 +7,11 @@ Semantic Versioning.
 
 ### Fixed
 
+- Config creation now skips AdGuard Home's rejected empty DHCP payload when
+  DHCP is absent or disabled.  TLS validation fields and the bookkeeping
+  timestamp now converge across unrelated updates and no-op plans.  Version
+  0.1.4 is affected by both lifecycle defects; upgrade to 0.1.5 or newer.
+
 - Registry checksums now cover only the 13 provider archives and manifest;
   SPDX SBOMs remain separate release assets. Versions 0.1.1 and 0.1.2 are
   affected by checksums that incorrectly reference SBOM assets.

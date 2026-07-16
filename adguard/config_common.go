@@ -299,8 +299,13 @@ func normalizeDisabledDhcpStatus(status adgmodels.DhcpStatus) adgmodels.DhcpStat
 // shouldSetDhcpConfig avoids sending AdGuard an incomplete disabled-DHCP
 // payload during an unrelated singleton configuration update.
 func shouldSetDhcpConfig(planned types.Bool, current types.Object) bool {
-	if planned.IsNull() || planned.IsUnknown() || current.IsNull() || current.IsUnknown() {
+	if planned.IsNull() || planned.IsUnknown() {
 		return true
+	}
+	// A create has no prior DHCP object.  The schema default is disabled with
+	// empty addresses, which AdGuard Home rejects if sent to set_config.
+	if current.IsNull() || current.IsUnknown() || current.Attributes() == nil {
+		return planned.ValueBool()
 	}
 
 	currentEnabled, ok := current.Attributes()["enabled"].(types.Bool)
@@ -309,6 +314,25 @@ func shouldSetDhcpConfig(planned types.Bool, current types.Object) bool {
 	}
 
 	return planned.ValueBool() || currentEnabled.ValueBool()
+}
+
+func tlsConfigInputsEqual(planned, current types.Object) bool {
+	if planned.IsNull() || planned.IsUnknown() || current.IsNull() || current.IsUnknown() {
+		return false
+	}
+
+	for _, name := range []string{
+		"enabled", "server_name", "certificate_chain", "private_key",
+		"force_https", "port_https", "port_dns_over_tls", "port_dns_over_quic",
+		"serve_plain_dns",
+	} {
+		plannedValue, plannedOK := planned.Attributes()[name]
+		currentValue, currentOK := current.Attributes()[name]
+		if !plannedOK || !currentOK || !plannedValue.Equal(currentValue) {
+			return false
+		}
+	}
+	return true
 }
 
 // dhcpIpv4Model maps DHCP IPv4 settings schema data
@@ -1605,71 +1629,74 @@ func (r *configResource) CreateOrUpdate(ctx context.Context, plan *configCommonM
 	if diags.HasError() {
 		return
 	}
-	// instantiate empty object for storing plan data
-	var tlsConfig adgmodels.TlsConfig
-	// populate tls config from plan
-	tlsConfig.Enabled = planTlsConfig.Enabled.ValueBool()
-	tlsConfig.ServerName = planTlsConfig.ServerName.ValueString()
-	tlsConfig.ForceHttps = planTlsConfig.ForceHttps.ValueBool()
-	tlsConfig.PortHttps = uint16(planTlsConfig.PortHttps.ValueInt64())
-	tlsConfig.PortDnsOverTls = uint16(planTlsConfig.PortDnsOverTls.ValueInt64())
-	tlsConfig.PortDnsOverQuic = uint16(planTlsConfig.PortDnsOverQuic.ValueInt64())
-	tlsConfig.ServePlainDns = planTlsConfig.ServePlainDns.ValueBool()
+	configureTls := !tlsConfigInputsEqual(plan.Tls, state.Tls)
+	if configureTls {
+		// instantiate empty object for storing plan data
+		var tlsConfig adgmodels.TlsConfig
+		// populate tls config from plan
+		tlsConfig.Enabled = planTlsConfig.Enabled.ValueBool()
+		tlsConfig.ServerName = planTlsConfig.ServerName.ValueString()
+		tlsConfig.ForceHttps = planTlsConfig.ForceHttps.ValueBool()
+		tlsConfig.PortHttps = uint16(planTlsConfig.PortHttps.ValueInt64())
+		tlsConfig.PortDnsOverTls = uint16(planTlsConfig.PortDnsOverTls.ValueInt64())
+		tlsConfig.PortDnsOverQuic = uint16(planTlsConfig.PortDnsOverQuic.ValueInt64())
+		tlsConfig.ServePlainDns = planTlsConfig.ServePlainDns.ValueBool()
 
-	// regex to match a file path
-	var filePathIdentifier = regexp.MustCompile(`^/\w|\w:`)
+		// regex to match a file path
+		var filePathIdentifier = regexp.MustCompile(`^/\w|\w:`)
 
-	// check what is the certificate chain
-	if len(planTlsConfig.CertificateChain.ValueString()) > 0 && filePathIdentifier.MatchString(planTlsConfig.CertificateChain.ValueString()[0:2]) {
-		// it's a file path
-		tlsConfig.CertificatePath = planTlsConfig.CertificateChain.ValueString()
-	} else {
-		// it's the base64 PEM file
-		tlsConfig.CertificateChain = planTlsConfig.CertificateChain.ValueString()
-	}
+		// check what is the certificate chain
+		if len(planTlsConfig.CertificateChain.ValueString()) > 0 && filePathIdentifier.MatchString(planTlsConfig.CertificateChain.ValueString()[0:2]) {
+			// it's a file path
+			tlsConfig.CertificatePath = planTlsConfig.CertificateChain.ValueString()
+		} else {
+			// it's the base64 PEM file
+			tlsConfig.CertificateChain = planTlsConfig.CertificateChain.ValueString()
+		}
 
-	// check what is the private key
-	if len(planTlsConfig.PrivateKey.ValueString()) > 0 && filePathIdentifier.MatchString(planTlsConfig.PrivateKey.ValueString()[0:2]) {
-		// it's a file path
-		tlsConfig.PrivateKeyPath = planTlsConfig.PrivateKey.ValueString()
-	} else {
-		// it's the base64 PEM file
-		tlsConfig.PrivateKey = planTlsConfig.PrivateKey.ValueString()
-	}
+		// check what is the private key
+		if len(planTlsConfig.PrivateKey.ValueString()) > 0 && filePathIdentifier.MatchString(planTlsConfig.PrivateKey.ValueString()[0:2]) {
+			// it's a file path
+			tlsConfig.PrivateKeyPath = planTlsConfig.PrivateKey.ValueString()
+		} else {
+			// it's the base64 PEM file
+			tlsConfig.PrivateKey = planTlsConfig.PrivateKey.ValueString()
+		}
 
-	// set tls config using plan
-	tlsConfigResponse, err := r.adg.TlsConfigure(tlsConfig)
-	if err != nil {
-		diags.AddError(
-			"Unable to Update AdGuard Home Config",
-			err.Error(),
-		)
-		return
-	}
+		// set tls config using plan
+		tlsConfigResponse, err := r.adg.TlsConfigure(tlsConfig)
+		if err != nil {
+			diags.AddError(
+				"Unable to Update AdGuard Home Config",
+				err.Error(),
+			)
+			return
+		}
 
-	// populate computed attributes
-	planTlsConfig.PrivateKeySaved = types.BoolValue(tlsConfigResponse.PrivateKeySaved)
-	planTlsConfig.ValidCert = types.BoolValue(tlsConfigResponse.ValidCert)
-	planTlsConfig.ValidChain = types.BoolValue(tlsConfigResponse.ValidChain)
-	planTlsConfig.ValidKey = types.BoolValue(tlsConfigResponse.ValidKey)
-	planTlsConfig.ValidPair = types.BoolValue(tlsConfigResponse.ValidPair)
-	planTlsConfig.KeyType = types.StringValue(tlsConfigResponse.KeyType)
-	planTlsConfig.Subject = types.StringValue(tlsConfigResponse.Subject)
-	planTlsConfig.Issuer = types.StringValue(tlsConfigResponse.Issuer)
-	planTlsConfig.NotBefore = types.StringValue(normalizeTlsTimestamp(tlsConfigResponse.NotBefore))
-	planTlsConfig.NotAfter = types.StringValue(normalizeTlsTimestamp(tlsConfigResponse.NotAfter))
-	planTlsConfig.DnsNames, d = types.ListValueFrom(ctx, types.StringType, tlsConfig.DnsNames)
-	diags.Append(d...)
-	if diags.HasError() {
-		return
-	}
-	planTlsConfig.WarningValidation = types.StringValue(tlsConfigResponse.WarningValidation)
+		// populate computed attributes
+		planTlsConfig.PrivateKeySaved = types.BoolValue(tlsConfigResponse.PrivateKeySaved)
+		planTlsConfig.ValidCert = types.BoolValue(tlsConfigResponse.ValidCert)
+		planTlsConfig.ValidChain = types.BoolValue(tlsConfigResponse.ValidChain)
+		planTlsConfig.ValidKey = types.BoolValue(tlsConfigResponse.ValidKey)
+		planTlsConfig.ValidPair = types.BoolValue(tlsConfigResponse.ValidPair)
+		planTlsConfig.KeyType = types.StringValue(tlsConfigResponse.KeyType)
+		planTlsConfig.Subject = types.StringValue(tlsConfigResponse.Subject)
+		planTlsConfig.Issuer = types.StringValue(tlsConfigResponse.Issuer)
+		planTlsConfig.NotBefore = types.StringValue(normalizeTlsTimestamp(tlsConfigResponse.NotBefore))
+		planTlsConfig.NotAfter = types.StringValue(normalizeTlsTimestamp(tlsConfigResponse.NotAfter))
+		planTlsConfig.DnsNames, d = types.ListValueFrom(ctx, types.StringType, tlsConfigResponse.DnsNames)
+		diags.Append(d...)
+		if diags.HasError() {
+			return
+		}
+		planTlsConfig.WarningValidation = types.StringValue(tlsConfigResponse.WarningValidation)
 
-	// overwrite plan with computed values
-	plan.Tls, d = types.ObjectValueFrom(ctx, tlsConfigModel{}.attrTypes(), &planTlsConfig)
-	diags.Append(d...)
-	if diags.HasError() {
-		return
+		// overwrite plan with computed values
+		plan.Tls, d = types.ObjectValueFrom(ctx, tlsConfigModel{}.attrTypes(), &planTlsConfig)
+		diags.Append(d...)
+		if diags.HasError() {
+			return
+		}
 	}
 
 	// REWRITES

@@ -6,6 +6,50 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
+func TestAccConfigResourceCreateWithDisabledDhcp(t *testing.T) {
+	config := providerConfig + `
+resource "adguardhome_config" "test" {
+	dns = {
+		upstream_dns = ["https://1.1.1.1/dns-query"]
+	}
+}
+`
+	updatedConfig := providerConfig + `
+resource "adguardhome_config" "test" {
+	dns = {
+		upstream_dns = ["https://1.0.0.1/dns-query"]
+	}
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("adguardhome_config.test", "dhcp.enabled", "false"),
+					resource.TestCheckResourceAttr("adguardhome_config.test", "dhcp.interface", ""),
+					resource.TestCheckResourceAttr("adguardhome_config.test", "tls.warning_validation", ""),
+					resource.TestCheckResourceAttr("adguardhome_config.test", "tls.dns_names.#", "0"),
+				),
+			},
+			{
+				Config: updatedConfig,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("adguardhome_config.test", "dhcp.enabled", "false"),
+					resource.TestCheckResourceAttr("adguardhome_config.test", "tls.warning_validation", ""),
+				),
+			},
+			{
+				Config:             updatedConfig,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func TestAccConfigResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
