@@ -18,8 +18,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
@@ -27,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
 // ensure the implementation satisfies the expected interfaces
@@ -65,6 +68,9 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"last_updated": schema.StringAttribute{
 				Description: "Timestamp of the last Terraform update of the config",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"filtering": schema.SingleNestedAttribute{
 				Computed: true,
@@ -696,53 +702,65 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						Default:     int64default.StaticInt64(CONFIG_TLS_PORT_DNS_OVER_QUIC),
 					},
 					"private_key_saved": schema.BoolAttribute{
-						Description: "Whether the user has previously saved a private key",
-						Computed:    true,
+						Description:   "Whether the user has previously saved a private key",
+						Computed:      true,
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 					},
 					"valid_cert": schema.BoolAttribute{
-						Description: "Whether the specified certificates chain is a valid chain of X.509 certificates",
-						Computed:    true,
+						Description:   "Whether the specified certificates chain is a valid chain of X.509 certificates",
+						Computed:      true,
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 					},
 					"valid_chain": schema.BoolAttribute{
-						Description: "Whether the specified certificates chain is verified and issued by a known CA",
-						Computed:    true,
+						Description:   "Whether the specified certificates chain is verified and issued by a known CA",
+						Computed:      true,
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 					},
 					"valid_key": schema.BoolAttribute{
-						Description: "Whether the private key is valid",
-						Computed:    true,
+						Description:   "Whether the private key is valid",
+						Computed:      true,
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 					},
 					"valid_pair": schema.BoolAttribute{
-						Description: "Whether both certificate and private key are correct",
-						Computed:    true,
+						Description:   "Whether both certificate and private key are correct",
+						Computed:      true,
+						PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 					},
 					"key_type": schema.StringAttribute{
-						Description: "The private key type, either `RSA` or `ECDSA`",
-						Computed:    true,
+						Description:   "The private key type, either `RSA` or `ECDSA`",
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"subject": schema.StringAttribute{
-						Description: "The subject of the first certificate in the chain",
-						Computed:    true,
+						Description:   "The subject of the first certificate in the chain",
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"issuer": schema.StringAttribute{
-						Description: "The issuer of the first certificate in the chain",
-						Computed:    true,
+						Description:   "The issuer of the first certificate in the chain",
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"not_before": schema.StringAttribute{
-						Description: "The NotBefore field of the first certificate in the chain",
-						Computed:    true,
+						Description:   "The NotBefore field of the first certificate in the chain",
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"not_after": schema.StringAttribute{
-						Description: "The NotAfter field of the first certificate in the chain",
-						Computed:    true,
+						Description:   "The NotAfter field of the first certificate in the chain",
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"dns_names": schema.ListAttribute{
-						Description: "The value of SubjectAltNames field of the first certificate in the chain",
-						ElementType: types.StringType,
-						Computed:    true,
+						Description:   "The value of SubjectAltNames field of the first certificate in the chain",
+						ElementType:   types.StringType,
+						Computed:      true,
+						PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 					},
 					"warning_validation": schema.StringAttribute{
-						Description: "The validation warning message with the issue description",
-						Computed:    true,
+						Description:   "The validation warning message with the issue description",
+						Computed:      true,
+						PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 					},
 					"serve_plain_dns": schema.BoolAttribute{
 						Description: fmt.Sprintf("When `true`, plain DNS is allowed for incoming requests. Defaults to `%t`", CONFIG_TLS_SERVE_PLAIN_DNS),
@@ -800,6 +818,40 @@ func (r *configResource) ModifyPlan(ctx context.Context, req resource.ModifyPlan
 	// update only the SafeSearch attribute in the plan
 	plan.SafeSearch = modifiedSafeSearch
 
+	if !req.State.Raw.IsNull() {
+		var state configCommonModel
+		diags = req.State.Get(ctx, &state)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if !tlsConfigInputsEqual(plan.Tls, state.Tls) {
+			var tls tlsConfigModel
+			diags = plan.Tls.As(ctx, &tls, basetypes.ObjectAsOptions{})
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			tls.PrivateKeySaved = types.BoolUnknown()
+			tls.ValidCert = types.BoolUnknown()
+			tls.ValidChain = types.BoolUnknown()
+			tls.ValidKey = types.BoolUnknown()
+			tls.ValidPair = types.BoolUnknown()
+			tls.KeyType = types.StringUnknown()
+			tls.Subject = types.StringUnknown()
+			tls.Issuer = types.StringUnknown()
+			tls.NotBefore = types.StringUnknown()
+			tls.NotAfter = types.StringUnknown()
+			tls.DnsNames = types.ListUnknown(types.StringType)
+			tls.WarningValidation = types.StringUnknown()
+			plan.Tls, diags = types.ObjectValueFrom(ctx, tlsConfigModel{}.attrTypes(), &tls)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
+	}
+
 	// set the modified plan
 	diags = resp.Plan.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -832,8 +884,7 @@ func (r *configResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	// defer to common function to create or update the resource
 	r.CreateOrUpdate(ctx, &plan, &state, &resp.Diagnostics)
-	if diags.HasError() {
-		resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
@@ -903,9 +954,6 @@ func (r *configResource) Update(ctx context.Context, req resource.UpdateRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// update resource state with updated items and timestamp
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC850))
 
 	// update state
 	diags = resp.State.Set(ctx, plan)

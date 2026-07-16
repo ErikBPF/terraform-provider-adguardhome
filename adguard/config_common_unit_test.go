@@ -76,12 +76,18 @@ func TestShouldSetDhcpConfig(t *testing.T) {
 	if !shouldSetDhcpConfig(types.BoolValue(false), enabled) {
 		t.Fatal("disabling DHCP must write its configuration")
 	}
-	if !shouldSetDhcpConfig(types.BoolValue(false), types.ObjectNull(dhcpConfigModel{}.attrTypes())) {
-		t.Fatal("unknown prior DHCP state must fail closed by writing the planned configuration")
+	if shouldSetDhcpConfig(types.BoolValue(false), types.ObjectNull(dhcpConfigModel{}.attrTypes())) {
+		t.Fatal("disabled DHCP must not be written during create")
+	}
+	if shouldSetDhcpConfig(types.BoolValue(false), types.Object{}) {
+		t.Fatal("disabled DHCP must not be written with an empty create state")
+	}
+	if !shouldSetDhcpConfig(types.BoolValue(true), types.ObjectNull(dhcpConfigModel{}.attrTypes())) {
+		t.Fatal("enabled DHCP must be written during create")
 	}
 }
 
-func TestMutableRuntimeStringsRemainComputedDuringPlan(t *testing.T) {
+func TestMutableRuntimeStringsConvergeDuringPlan(t *testing.T) {
 	var response resource.SchemaResponse
 	(&configResource{}).Schema(context.Background(), resource.SchemaRequest{}, &response)
 
@@ -94,8 +100,8 @@ func TestMutableRuntimeStringsRemainComputedDuringPlan(t *testing.T) {
 		if !stringAttribute.Computed {
 			t.Fatalf("%s is not computed", name)
 		}
-		if len(stringAttribute.PlanModifiers) != 0 {
-			t.Fatalf("%s must be unknown during updates so apply can refresh it", name)
+		if len(stringAttribute.PlanModifiers) != 1 {
+			t.Fatalf("%s must preserve refreshed state during no-op plans", name)
 		}
 	}
 
