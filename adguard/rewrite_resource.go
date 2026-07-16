@@ -27,7 +27,12 @@ var (
 	_ resource.Resource                = &rewriteResource{}
 	_ resource.ResourceWithConfigure   = &rewriteResource{}
 	_ resource.ResourceWithImportState = &rewriteResource{}
+	_ resource.ResourceWithMoveState   = &rewriteResource{}
 )
+
+func (r *rewriteResource) MoveState(ctx context.Context) []resource.StateMover {
+	return []resource.StateMover{legacyStateMover("adguard_rewrite", resourceSchema(ctx, r), func() any { return &rewriteResourceModel{} })}
+}
 
 // rewriteResource is the resource implementation
 type rewriteResource struct {

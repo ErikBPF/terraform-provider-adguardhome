@@ -37,7 +37,12 @@ var (
 	_ resource.Resource                = &configResource{}
 	_ resource.ResourceWithConfigure   = &configResource{}
 	_ resource.ResourceWithImportState = &configResource{}
+	_ resource.ResourceWithMoveState   = &configResource{}
 )
+
+func (r *configResource) MoveState(ctx context.Context) []resource.StateMover {
+	return []resource.StateMover{legacyStateMover("adguard_config", resourceSchema(ctx, r), func() any { return &configCommonModel{} })}
+}
 
 // configResource is the resource implementation
 type configResource struct {
