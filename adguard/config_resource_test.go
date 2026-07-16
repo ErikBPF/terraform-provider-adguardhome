@@ -50,6 +50,34 @@ resource "adguardhome_config" "test" {
 	})
 }
 
+func TestAccConfigResourceExplicitNullPauseScheduleConverges(t *testing.T) {
+	config := providerConfig + `
+resource "adguardhome_config" "test" {
+	blocked_services_pause_schedule = null
+}
+`
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:             config,
+				ResourceName:       "adguardhome_config.test",
+				ImportStateId:      "1",
+				ImportState:        true,
+				ImportStateVerify:  false,
+				ImportStatePersist: true,
+			},
+			{Config: config},
+			{
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func TestAccConfigResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
