@@ -12,6 +12,10 @@ Semantic Versioning.
 
 ### Fixed
 
+- Singleton config refresh now normalizes empty DNS allowed/disallowed client
+  lists to omitted values, preventing a perpetual diff after AdGuard Home
+  restarts.
+
 - Imported or provider-migrated singleton config now converges when
   `blocked_services_pause_schedule` is explicitly null. Version 0.1.5 is
   affected by a perpetual diff when AdGuard Home normalizes the unset schedule
